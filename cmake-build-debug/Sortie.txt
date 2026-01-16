@@ -1,0 +1,29 @@
+Fichiers disponibles :
+1. #1.txt
+2. #2.txt
+3. test.txt
+4. AutomatePerso.txt
+Choisissez un fichier (1-4) : Vous avez choisi : C:\Users\arman\OneDrive\Bureau\Automate/Automates/#1.txt 
+
+Automate original (fichier : C:\Users\arman\OneDrive\Bureau\Automate/Automates/#1.txt) :
+Alphabet : 
+Nombre d'états : 1
+États initiaux : 0 
+États terminaux : 0 
+Transitions :
+
+L'automate est déjà déterministe. Pas besoin de déterminiser.
+
+L'automate est déjà standard. Pas besoin de standardiser.
+
+L'automate est déjà complet. Pas besoin de compléter.
+
+Voulez-vous tester un mot sur cet automate ? (o/n) : Entrez le mot à tester : Le symbole 'a' n'est pas dans l'alphabet.
+Le mot "abb" n'est pas reconnu par l'automate.
+
+Voulez-vous tester un mot sur cet automate ? (o/n) : Entrez le mot à tester : Le symbole 'b' n'est pas dans l'alphabet.
+Le mot "bb" n'est pas reconnu par l'automate.
+
+Voulez-vous tester un mot sur cet automate ? (o/n) : 
+=== Traitement de l'automate : C:\Users\arman\OneDrive\Bureau\Automate/Automates#1.txt ===
+Erreur : impossible d'ouvrir le fichier C:\Users\arman\OneDrive\Bureau\Automate/Automates#1.txt
