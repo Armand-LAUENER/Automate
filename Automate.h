@@ -3,63 +3,59 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <stdarg.h>
-#include <dirent.h>
+#include <stdbool.h>
 
-#define MAX_FILES 100
-#define MAX_STATES 100
-#define MAX_SYMBOLS 26
-#define MAX_TRANSITIONS_PER_CELL 10
-#define MAX_NEW_STATES 1000
+// --- Dynamic Structures ---
 
-
-// Pointeur global pour le fichier de sortie.
-extern FILE *outputFile;
-
-// Structure pour stocker plusieurs transitions pour un même symbole
+// Transition list for a cell (state, symbol)
 typedef struct {
-    int nb;                             // Nombre de transitions enregistrées pour ce symbole
-    int dest[MAX_TRANSITIONS_PER_CELL]; // États d'arrivée
+    int count;          // Number of transitions
+    int capacity;       // Allocated capacity
+    int *destinations;  // Dynamic array of destination states
 } TransitionList;
 
-// Pour la déterminisation (représentation d'un sous-ensemble d'états)
+// Main automaton structure
 typedef struct {
-    int states[MAX_STATES]; // 1 si l'état est présent, 0 sinon
-} Subset;
+    int num_symbols;    // Alphabet size
+    int num_states;     // Total number of states
 
-typedef struct {
-    int num_symbols;                // Nombre de symboles de l'alphabet
-    int num_states;                 // Nombre d'états
-    int num_initial_states;         // Nombre d'états initiaux
-    int initial_states[MAX_STATES]; // Liste des états initiaux
-    int num_final_states;           // Nombre d'états terminaux
-    int final_states[MAX_STATES];   // Liste des états terminaux
-    TransitionList transitions[MAX_STATES][MAX_SYMBOLS]; // Table des transitions
-} Automate;
+    int num_initials;
+    int *initials;      // Dynamic array of initial states
 
-// Fonctions utilitaires de gestion de fichiers
-void choisirFichier(char *filename);
+    int num_finals;
+    int *finals;        // Dynamic array of final states
 
-// Fonctions de lecture et d'affichage de l'automate
-void lireAutomateGeneral(const char *filename, Automate *A);
-void afficherAutomateGeneral(const Automate *A);
-void log_printf(const char *format, ...);
-void processAutomateFromFile(const char *filename);
-void processAllAutomates();
+    // Flattened 1D transition table for efficiency
+    // Access: transitions[state * num_symbols + symbol]
+    TransitionList *transitions;
+} Automaton;
 
-// Fonctions d'analyse et de transformation
-int estDeterministe(const Automate *A);
-int estStandard(const Automate *A);
-int estComplet(const Automate *A);
-Automate determiniser(const Automate *A);
-Automate standardiser(const Automate *A);
-Automate completer(const Automate A);
+// --- Memory Management ---
+Automaton createAutomaton(int num_states, int num_symbols);
+void freeAutomaton(Automaton *A);
+void addTransition(Automaton *A, int from, int symbol_idx, int to);
 
-// Fonction de reconnaissance de mot
-int reconnaitreMot(const Automate *A, const char *mot);
+// --- Input / Output (Logging) ---
+void logMessage(FILE *logFile, const char *format, ...);
+void printAutomaton(const Automaton *A, FILE *logFile);
+bool loadAutomaton(const char *filename, Automaton *A, FILE *logFile);
+void listAndChooseFile(char *buffer, size_t size, FILE *logFile);
 
-// Fonction utilitaire pour comparer deux sous-ensembles
-int sameSubset(int *subset1, int *subset2, int n);
+// --- Analysis ---
+bool isDeterministic(const Automaton *A, FILE *logFile);
+bool isStandard(const Automaton *A, FILE *logFile);
+bool isComplete(const Automaton *A, FILE *logFile);
 
-#endif
+// --- Transformations ---
+Automaton determinize(const Automaton *A, FILE *logFile);
+Automaton standardize(const Automaton *A, FILE *logFile);
+Automaton complete(const Automaton *A, FILE *logFile);
+
+// --- Simulation ---
+bool recognizeWord(const Automaton *A, const char *word, FILE *logFile);
+
+// --- High-level Processing ---
+void processAutomaton(const char *filepath, FILE *logFile);
+void processAllAutomata(FILE *logFile);
+
+#endif // AUTOMATE_H

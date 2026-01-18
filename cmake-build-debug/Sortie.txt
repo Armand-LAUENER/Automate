@@ -1,29 +1,164 @@
-Fichiers disponibles :
-1. #1.txt
-2. #2.txt
-3. test.txt
-4. AutomatePerso.txt
-Choisissez un fichier (1-4) : Vous avez choisi : C:\Users\arman\OneDrive\Bureau\Automate/Automates/#1.txt 
+=== Projet Automate (Refactorise) ===
 
-Automate original (fichier : C:\Users\arman\OneDrive\Bureau\Automate/Automates/#1.txt) :
+--- MENU PRINCIPAL ---
+1. Traiter un automate specifique
+2. Traiter tous les automates
+3. Quitter
+
+=== Analyse de : ../Automates/#1.txt ===
 Alphabet : 
-Nombre d'états : 1
-États initiaux : 0 
-États terminaux : 0 
+Etats : 1
+Etats initiaux : 0 
+Etats terminaux : 0 
 Transitions :
+-------------------------
 
-L'automate est déjà déterministe. Pas besoin de déterminiser.
+Tester un mot ? (entrez le mot ou 'vide' ou tapez Entree pour passer) : 
+=== Analyse de : ../Automates/#2.txt ===
+Alphabet : a b 
+Etats : 2
+Etats initiaux : 0 
+Etats terminaux : 1 
+Transitions :
+  0 --(a)--> 0
+  1 --(b)--> 1
+-------------------------
 
-L'automate est déjà standard. Pas besoin de standardiser.
+>>> Transformation : Standardisation
+Alphabet : a b 
+Etats : 3
+Etats initiaux : 2 
+Etats terminaux : 1 
+Transitions :
+  0 --(a)--> 0
+  1 --(b)--> 1
+  2 --(a)--> 0
+-------------------------
 
-L'automate est déjà complet. Pas besoin de compléter.
+>>> Transformation : Completion
+Alphabet : a b 
+Etats : 4
+Etats initiaux : 2 
+Etats terminaux : 1 
+Transitions :
+  0 --(a)--> 0
+  0 --(b)--> 3
+  1 --(a)--> 3
+  1 --(b)--> 1
+  2 --(a)--> 0
+  2 --(b)--> 3
+  3 --(a)--> 3
+  3 --(b)--> 3
+-------------------------
 
-Voulez-vous tester un mot sur cet automate ? (o/n) : Entrez le mot à tester : Le symbole 'a' n'est pas dans l'alphabet.
-Le mot "abb" n'est pas reconnu par l'automate.
+Tester un mot ? (entrez le mot ou 'vide' ou tapez Entree pour passer) : 
+=== Analyse de : ../Automates/AutomatePerso.txt ===
+Alphabet : a b c 
+Etats : 6
+Etats initiaux : 0 
+Etats terminaux : 2 5 
+Transitions :
+  0 --(a)--> 1
+  0 --(a)--> 2
+  1 --(b)--> 0
+  1 --(c)--> 3
+  2 --(b)--> 4
+  2 --(c)--> 2
+  3 --(a)--> 3
+  3 --(b)--> 5
+  4 --(a)--> 5
+  5 --(c)--> 5
+-------------------------
 
-Voulez-vous tester un mot sur cet automate ? (o/n) : Entrez le mot à tester : Le symbole 'b' n'est pas dans l'alphabet.
-Le mot "bb" n'est pas reconnu par l'automate.
+>>> Transformation : Determinisation
+Alphabet : a b c 
+Etats : 12
+Etats initiaux : 0 
+Etats terminaux : 1 3 4 6 7 8 9 11 
+Transitions :
+  0 --(a)--> 1
+  1 --(b)--> 2
+  1 --(c)--> 3
+  2 --(a)--> 4
+  3 --(a)--> 5
+  3 --(b)--> 6
+  3 --(c)--> 7
+  4 --(b)--> 2
+  4 --(c)--> 8
+  5 --(a)--> 5
+  5 --(b)--> 9
+  6 --(a)--> 9
+  6 --(c)--> 9
+  7 --(b)--> 10
+  7 --(c)--> 7
+  8 --(a)--> 5
+  8 --(b)--> 6
+  8 --(c)--> 11
+  9 --(c)--> 9
+  10 --(a)--> 9
+  11 --(b)--> 10
+  11 --(c)--> 11
+-------------------------
 
-Voulez-vous tester un mot sur cet automate ? (o/n) : 
-=== Traitement de l'automate : C:\Users\arman\OneDrive\Bureau\Automate/Automates#1.txt ===
-Erreur : impossible d'ouvrir le fichier C:\Users\arman\OneDrive\Bureau\Automate/Automates#1.txt
+>>> Transformation : Completion
+Alphabet : a b c 
+Etats : 13
+Etats initiaux : 0 
+Etats terminaux : 1 3 4 6 7 8 9 11 
+Transitions :
+  0 --(a)--> 1
+  0 --(b)--> 12
+  0 --(c)--> 12
+  1 --(a)--> 12
+  1 --(b)--> 2
+  1 --(c)--> 3
+  2 --(a)--> 4
+  2 --(b)--> 12
+  2 --(c)--> 12
+  3 --(a)--> 5
+  3 --(b)--> 6
+  3 --(c)--> 7
+  4 --(a)--> 12
+  4 --(b)--> 2
+  4 --(c)--> 8
+  5 --(a)--> 5
+  5 --(b)--> 9
+  5 --(c)--> 12
+  6 --(a)--> 9
+  6 --(b)--> 12
+  6 --(c)--> 9
+  7 --(a)--> 12
+  7 --(b)--> 10
+  7 --(c)--> 7
+  8 --(a)--> 5
+  8 --(b)--> 6
+  8 --(c)--> 11
+  9 --(a)--> 12
+  9 --(b)--> 12
+  9 --(c)--> 9
+  10 --(a)--> 9
+  10 --(b)--> 12
+  10 --(c)--> 12
+  11 --(a)--> 12
+  11 --(b)--> 10
+  11 --(c)--> 11
+  12 --(a)--> 12
+  12 --(b)--> 12
+  12 --(c)--> 12
+-------------------------
+
+Tester un mot ? (entrez le mot ou 'vide' ou tapez Entree pour passer) : Resultat : 'aabb' est REFUSE.
+
+Tester un mot ? (entrez le mot ou 'vide' ou tapez Entree pour passer) : Resultat : 'aba' est ACCEPTE.
+
+Tester un mot ? (entrez le mot ou 'vide' ou tapez Entree pour passer) : Resultat : 'b' est REFUSE.
+
+Tester un mot ? (entrez le mot ou 'vide' ou tapez Entree pour passer) : Resultat : 'abaaaaa' est REFUSE.
+
+Tester un mot ? (entrez le mot ou 'vide' ou tapez Entree pour passer) : Resultat : 'abbbbb' est REFUSE.
+
+Tester un mot ? (entrez le mot ou 'vide' ou tapez Entree pour passer) : Resultat : 'ababababab' est REFUSE.
+
+Tester un mot ? (entrez le mot ou 'vide' ou tapez Entree pour passer) : Resultat : 'abababababa' est ACCEPTE.
+
+Tester un mot ? (entrez le mot ou 'vide' ou tapez Entree pour passer) : 

@@ -1,45 +1,136 @@
 #include <stdio.h>
-#include "Automate.h"
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <dirent.h>
 
-// Définition du pointeur global pour le fichier de sortie.
-FILE *outputFile = NULL;
+#include "AutomateCore.h"
+#include "AutomateIO.h"
+#include "AutomateAnalysis.h"
+#include "AutomateTransform.h"
 
-int main() {
-    int choix;
-    char filename[256];
+// --- Helper Local ---
 
-    // Ouverture du fichier de sortie dans le dossier "Sortie".
-    outputFile = fopen("Sortie.txt", "w");
-    if (outputFile == NULL) {
-        perror("Erreur lors de l'ouverture du fichier de sortie");
-        exit(EXIT_FAILURE);
+void processAutomaton(const char *filepath, FILE *logFile) {
+    Automaton A;
+    if (!loadAutomaton(filepath, &A, logFile)) return;
+
+    logMessage(logFile, "\n=== Analyse de : %s ===\n", filepath);
+    printAutomaton(&A, logFile);
+
+    if (!isDeterministic(&A, logFile)) {
+        logMessage(logFile, "\n>>> Transformation : Determinisation\n");
+        Automaton det = determinize(&A, logFile);
+        freeAutomaton(&A); A = det;
+        printAutomaton(&A, logFile);
+    }
+    if (!isStandard(&A, logFile)) {
+        logMessage(logFile, "\n>>> Transformation : Standardisation\n");
+        Automaton std = standardize(&A, logFile);
+        freeAutomaton(&A); A = std;
+        printAutomaton(&A, logFile);
+    }
+    if (!isComplete(&A, logFile)) {
+        logMessage(logFile, "\n>>> Transformation : Completion\n");
+        Automaton comp = complete(&A, logFile);
+        freeAutomaton(&A); A = comp;
+        printAutomaton(&A, logFile);
     }
 
-    do {
-        printf("\n=== Menu Principal ===\n");
-        printf("1. Lire et traiter un automate existant\n");
-        printf("2. Lire et traiter tous les automates\n");
-        printf("3. Quitter\n");
-        printf("Votre choix : ");
-        scanf("%d", &choix);
+    while (1) {
+        char buffer[256];
+        logMessage(logFile, "\nTester un mot ? (entrez le mot ou 'vide' ou tapez Entree pour passer) : ");
+        if (fgets(buffer, sizeof(buffer), stdin) == NULL || buffer[0] == '\n') break;
+        buffer[strcspn(buffer, "\n")] = 0;
+        char *word = buffer;
+        if (strcmp(word, "vide") == 0) word = "";
 
-        switch (choix) {
+        if (recognizeWord(&A, word, logFile)) {
+            logMessage(logFile, "Resultat : '%s' est ACCEPTE.\n", word);
+        } else {
+            logMessage(logFile, "Resultat : '%s' est REFUSE.\n", word);
+        }
+    }
+    freeAutomaton(&A);
+}
+
+void processAllAutomata(FILE *logFile) {
+    char folderPath[512];
+    if (!resolveAutomatesPath(folderPath, sizeof(folderPath), logFile)) return;
+
+    DIR *d = opendir(folderPath);
+    struct dirent *dir;
+    while ((dir = readdir(d)) != NULL) {
+        if (strstr(dir->d_name, ".txt")) {
+            char path[512];
+            snprintf(path, sizeof(path), "%s/%s", folderPath, dir->d_name);
+            processAutomaton(path, logFile);
+        }
+    }
+    closedir(d);
+}
+
+static void resolveOutputPath(char *buffer, size_t size) {
+    const char *targetFolder = "Automates-exit";
+    const char *candidates[] = { ".", "..", "../..", "../../.." };
+
+    buffer[0] = '\0';
+    for (int i = 0; i < 4; i++) {
+        char testPath[512];
+        snprintf(testPath, sizeof(testPath), "%s/%s", candidates[i], targetFolder);
+        DIR *dir = opendir(testPath);
+        if (dir) {
+            closedir(dir);
+            snprintf(buffer, size, "%s/Exit.txt", testPath);
+            return;
+        }
+    }
+    snprintf(buffer, size, "./%s/Exit.txt", targetFolder);
+}
+
+int main() {
+    char outputPath[512];
+    resolveOutputPath(outputPath, sizeof(outputPath));
+    FILE *logFile = fopen(outputPath, "w");
+
+    if (!logFile) {
+        logFile = fopen("Exit.txt", "w"); // Fallback
+    }
+
+    if (logFile) printf("Log file initialized: %s\n", outputPath);
+
+    logMessage(logFile, "=== Projet Automate (Modulaire) ===\n");
+
+    int choice = 0;
+    char buffer[10];
+
+    do {
+        logMessage(logFile, "\n--- MENU PRINCIPAL ---\n");
+        logMessage(logFile, "1. Traiter un automate specifique\n");
+        logMessage(logFile, "2. Traiter tous les automates\n");
+        logMessage(logFile, "3. Quitter\n");
+        printf("Choix : ");
+
+        if (fgets(buffer, sizeof(buffer), stdin) == NULL) break;
+        choice = atoi(buffer);
+
+        char filepath[512];
+        switch (choice) {
             case 1:
-                choisirFichier(filename);
-                processAutomateFromFile(filename);
+                listAndChooseFile(filepath, sizeof(filepath), logFile);
+                if (filepath[0] != '\0') processAutomaton(filepath, logFile);
                 break;
             case 2:
-                processAllAutomates();
+                processAllAutomata(logFile);
                 break;
             case 3:
-                printf("Au revoir !\n");
+                logMessage(logFile, "Fermeture du programme.\n");
                 break;
             default:
-                printf("Choix invalide. Veuillez réessayer.\n");
-                break;
+                logMessage(logFile, "Choix invalide.\n");
         }
-    } while (choix != 3);
+    } while (choice != 3);
 
-    fclose(outputFile);  // Fermeture du fichier de sortie.
+    if (logFile) fclose(logFile);
     return 0;
 }
