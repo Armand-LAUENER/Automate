@@ -27,29 +27,30 @@ void addUnique(int **array, int *size, int value) {
 
 // --- Memory Management ---
 
-Automaton createAutomaton(int num_states, int num_symbols) {
-    Automaton A;
-    A.num_states = num_states;
-    A.num_symbols = num_symbols;
-    A.num_initials = 0;
-    A.initials = NULL;
-    A.num_finals = 0;
-    A.finals = NULL;
+bool createAutomaton(Automaton *A, int num_states, int num_symbols) {
+    if (!A || num_states <= 0 || num_symbols <= 0) return false;
+
+    A->num_states = num_states;
+    A->num_symbols = num_symbols;
+    A->num_initials = 0;
+    A->initials = NULL;
+    A->num_finals = 0;
+    A->finals = NULL;
 
     int total_cells = num_states * num_symbols;
-    A.transitions = malloc(total_cells * sizeof(TransitionList));
+    A->transitions = malloc(total_cells * sizeof(TransitionList));
     
-    if (!A.transitions) {
-        perror("Fatal Error: Memory allocation for automaton transitions failed");
-        exit(EXIT_FAILURE);
+    if (!A->transitions) {
+        perror("Error: Memory allocation for automaton transitions failed");
+        return false;
     }
 
     for (int i = 0; i < total_cells; i++) {
-        A.transitions[i].count = 0;
-        A.transitions[i].capacity = 0;
-        A.transitions[i].destinations = NULL;
+        A->transitions[i].count = 0;
+        A->transitions[i].capacity = 0;
+        A->transitions[i].destinations = NULL;
     }
-    return A;
+    return true;
 }
 
 void freeAutomaton(Automaton *A) {
@@ -72,8 +73,8 @@ void freeAutomaton(Automaton *A) {
     A->num_symbols = 0;
 }
 
-void addTransition(Automaton *A, int from, int symbol_idx, int to) {
-    if (from < 0 || from >= A->num_states || symbol_idx < 0 || symbol_idx >= A->num_symbols) return;
+bool addTransition(Automaton *A, int from, int symbol_idx, int to) {
+    if (!A || from < 0 || from >= A->num_states || symbol_idx < 0 || symbol_idx >= A->num_symbols) return false;
 
     int index = from * A->num_symbols + symbol_idx;
     TransitionList *list = &A->transitions[index];
@@ -82,11 +83,12 @@ void addTransition(Automaton *A, int from, int symbol_idx, int to) {
         int new_cap = (list->capacity == 0) ? DEFAULT_CAPACITY : list->capacity * 2;
         int *temp = realloc(list->destinations, new_cap * sizeof(int));
         if (!temp) {
-            perror("Critical Error: Failed to realloc transition list");
-            return; 
+            perror("Error: Failed to realloc transition list");
+            return false;
         }
         list->destinations = temp;
         list->capacity = new_cap;
     }
     list->destinations[list->count++] = to;
+    return true;
 }

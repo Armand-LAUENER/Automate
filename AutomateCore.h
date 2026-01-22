@@ -28,9 +28,9 @@ typedef struct {
 } Automaton;
 
 // --- Memory Management ---
-Automaton createAutomaton(int num_states, int num_symbols);
+bool createAutomaton(Automaton *A, int num_states, int num_symbols);
 void freeAutomaton(Automaton *A);
-void addTransition(Automaton *A, int from, int symbol_idx, int to);
+bool addTransition(Automaton *A, int from, int symbol_idx, int to);
 
 // --- Utilities ---
 bool arrayContains(const int *array, int size, int value);

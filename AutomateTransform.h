@@ -4,8 +4,9 @@
 #include "AutomateCore.h"
 #include <stdio.h>
 
-Automaton determinize(const Automaton *A, FILE *logFile);
-Automaton standardize(const Automaton *A, FILE *logFile);
-Automaton complete(const Automaton *A, FILE *logFile);
+bool determinize(const Automaton *A, Automaton *out, FILE *logFile);
+bool standardize(const Automaton *A, Automaton *out, FILE *logFile);
+bool complete(const Automaton *A, Automaton *out, FILE *logFile);
+bool minimize(const Automaton *A, Automaton *out, FILE *logFile);
 
 #endif // AUTOMATE_TRANSFORM_H

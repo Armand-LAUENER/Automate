@@ -2,54 +2,84 @@
 #include "AutomateIO.h" // For logMessage if needed
 #include <string.h>
 
-Automaton complete(const Automaton *A, FILE *logFile) {
-    Automaton newA = createAutomaton(A->num_states + 1, A->num_symbols);
+bool complete(const Automaton *A, Automaton *out, FILE *logFile) {
+    if (!createAutomaton(out, A->num_states + 1, A->num_symbols)) return false;
     int trashState = A->num_states;
 
-    newA.num_initials = A->num_initials;
-    newA.initials = malloc(newA.num_initials * sizeof(int));
-    memcpy(newA.initials, A->initials, newA.num_initials * sizeof(int));
+    out->num_initials = A->num_initials;
+    out->initials = malloc(out->num_initials * sizeof(int));
+    if (out->num_initials > 0 && !out->initials) {
+        freeAutomaton(out);
+        return false;
+    }
+    memcpy(out->initials, A->initials, out->num_initials * sizeof(int));
 
-    newA.num_finals = A->num_finals;
-    newA.finals = malloc(newA.num_finals * sizeof(int));
-    memcpy(newA.finals, A->finals, newA.num_finals * sizeof(int));
+    out->num_finals = A->num_finals;
+    out->finals = malloc(out->num_finals * sizeof(int));
+    if (out->num_finals > 0 && !out->finals) {
+        freeAutomaton(out);
+        return false;
+    }
+    memcpy(out->finals, A->finals, out->num_finals * sizeof(int));
 
     for (int i = 0; i < A->num_states; i++) {
         for (int j = 0; j < A->num_symbols; j++) {
             int idx = i * A->num_symbols + j;
             if (A->transitions[idx].count == 0) {
-                addTransition(&newA, i, j, trashState);
+                if (!addTransition(out, i, j, trashState)) {
+                    freeAutomaton(out);
+                    return false;
+                }
             } else {
                 for(int k=0; k < A->transitions[idx].count; k++) {
-                    addTransition(&newA, i, j, A->transitions[idx].destinations[k]);
+                    if (!addTransition(out, i, j, A->transitions[idx].destinations[k])) {
+                        freeAutomaton(out);
+                        return false;
+                    }
                 }
             }
         }
     }
-    for (int j = 0; j < A->num_symbols; j++) addTransition(&newA, trashState, j, trashState);
-    return newA;
+    for (int j = 0; j < A->num_symbols; j++) {
+        if (!addTransition(out, trashState, j, trashState)) {
+            freeAutomaton(out);
+            return false;
+        }
+    }
+    return true;
 }
 
-Automaton standardize(const Automaton *A, FILE *logFile) {
-    Automaton newA = createAutomaton(A->num_states + 1, A->num_symbols);
+bool standardize(const Automaton *A, Automaton *out, FILE *logFile) {
+    if (!createAutomaton(out, A->num_states + 1, A->num_symbols)) return false;
     int newInit = A->num_states;
 
-    newA.num_initials = 1;
-    newA.initials = malloc(sizeof(int));
-    newA.initials[0] = newInit;
+    out->num_initials = 1;
+    out->initials = malloc(sizeof(int));
+    if (!out->initials) {
+        freeAutomaton(out);
+        return false;
+    }
+    out->initials[0] = newInit;
 
     for(int i=0; i<A->num_states; i++) {
         for(int j=0; j<A->num_symbols; j++) {
             int idx = i * A->num_symbols + j;
             for(int k=0; k<A->transitions[idx].count; k++) {
-                addTransition(&newA, i, j, A->transitions[idx].destinations[k]);
+                if (!addTransition(out, i, j, A->transitions[idx].destinations[k])) {
+                    freeAutomaton(out);
+                    return false;
+                }
             }
         }
     }
 
-    newA.num_finals = A->num_finals;
-    newA.finals = malloc((A->num_finals + 1) * sizeof(int));
-    memcpy(newA.finals, A->finals, A->num_finals * sizeof(int));
+    out->num_finals = A->num_finals;
+    out->finals = malloc((A->num_finals + 1) * sizeof(int));
+    if (!out->finals) {
+        freeAutomaton(out);
+        return false;
+    }
+    memcpy(out->finals, A->finals, A->num_finals * sizeof(int));
 
     bool initIsFinal = false;
     for(int i=0; i<A->num_initials; i++) {
@@ -57,7 +87,7 @@ Automaton standardize(const Automaton *A, FILE *logFile) {
             initIsFinal = true; break;
         }
     }
-    if (initIsFinal) newA.finals[newA.num_finals++] = newInit;
+    if (initIsFinal) out->finals[out->num_finals++] = newInit;
 
     for(int j=0; j<A->num_symbols; j++) {
         for(int i=0; i<A->num_initials; i++) {
@@ -67,14 +97,19 @@ Automaton standardize(const Automaton *A, FILE *logFile) {
                 int dest = A->transitions[idx].destinations[k];
                 int newIdx = newInit * A->num_symbols + j;
                 bool exists = false;
-                for(int t=0; t<newA.transitions[newIdx].count; t++) {
-                    if(newA.transitions[newIdx].destinations[t] == dest) exists = true;
+                for(int t=0; t<out->transitions[newIdx].count; t++) {
+                    if(out->transitions[newIdx].destinations[t] == dest) exists = true;
                 }
-                if(!exists) addTransition(&newA, newInit, j, dest);
+                if(!exists) {
+                    if (!addTransition(out, newInit, j, dest)) {
+                        freeAutomaton(out);
+                        return false;
+                    }
+                }
             }
         }
     }
-    return newA;
+    return true;
 }
 
 typedef struct { int *states; int count; } Subset;
@@ -91,13 +126,25 @@ static bool areSubsetsEqual(Subset *a, Subset *b) {
     return true;
 }
 
-Automaton determinize(const Automaton *A, FILE *logFile) {
+bool determinize(const Automaton *A, Automaton *out, FILE *logFile) {
     int capacity = 64; 
     Subset *subsets = malloc(capacity * sizeof(Subset));
+    if (!subsets) return false;
     int num_subsets = 0;
     int **tempTrans = malloc(capacity * sizeof(int*));
+    if (!tempTrans) {
+        free(subsets);
+        return false;
+    }
     for(int i=0; i<capacity; i++) {
         tempTrans[i] = malloc(A->num_symbols * sizeof(int));
+        if (!tempTrans[i]) {
+            // cleanup
+            for(int j=0; j<i; j++) free(tempTrans[j]);
+            free(tempTrans);
+            free(subsets);
+            return false;
+        }
         for(int s=0; s<A->num_symbols; s++) tempTrans[i][s] = -1;
     }
 
@@ -110,9 +157,27 @@ Automaton determinize(const Automaton *A, FILE *logFile) {
         if (num_subsets >= capacity - 1) {
             capacity *= 2;
             subsets = realloc(subsets, capacity * sizeof(Subset));
+            if (!subsets) {
+                // cleanup
+                for(int i=0; i<num_subsets; i++) free(subsets[i].states);
+                for(int i=0; i<capacity/2; i++) free(tempTrans[i]);
+                free(tempTrans);
+                return false;
+            }
             tempTrans = realloc(tempTrans, capacity * sizeof(int*));
+            if (!tempTrans) {
+                free(subsets);
+                return false;
+            }
             for(int k=num_subsets; k<capacity; k++) {
                 tempTrans[k] = malloc(A->num_symbols * sizeof(int));
+                if (!tempTrans[k]) {
+                    // cleanup
+                    for(int j=0; j<k; j++) free(tempTrans[j]);
+                    free(tempTrans);
+                    free(subsets);
+                    return false;
+                }
                 for(int s=0; s<A->num_symbols; s++) tempTrans[k][s] = -1;
             }
         }
@@ -150,10 +215,26 @@ Automaton determinize(const Automaton *A, FILE *logFile) {
         processed++;
     }
 
-    Automaton newA = createAutomaton(num_subsets, A->num_symbols);
-    newA.num_initials = 1;
-    newA.initials = malloc(sizeof(int));
-    newA.initials[0] = 0;
+    if (!createAutomaton(out, num_subsets, A->num_symbols)) {
+        // cleanup
+        for(int i=0; i<num_subsets; i++) free(subsets[i].states);
+        for(int i=0; i<capacity; i++) free(tempTrans[i]);
+        free(subsets);
+        free(tempTrans);
+        return false;
+    }
+    out->num_initials = 1;
+    out->initials = malloc(sizeof(int));
+    if (!out->initials) {
+        freeAutomaton(out);
+        // cleanup
+        for(int i=0; i<num_subsets; i++) free(subsets[i].states);
+        for(int i=0; i<capacity; i++) free(tempTrans[i]);
+        free(subsets);
+        free(tempTrans);
+        return false;
+    }
+    out->initials[0] = 0;
 
     for(int i=0; i<num_subsets; i++) {
         bool isFinal = false;
@@ -163,12 +244,30 @@ Automaton determinize(const Automaton *A, FILE *logFile) {
             }
         }
         if (isFinal) {
-            newA.finals = realloc(newA.finals, (newA.num_finals + 1) * sizeof(int));
-            newA.finals[newA.num_finals++] = i;
+            int *new_finals = realloc(out->finals, (out->num_finals + 1) * sizeof(int));
+            if (!new_finals) {
+                freeAutomaton(out);
+                // cleanup
+                for(int j=0; j<num_subsets; j++) free(subsets[j].states);
+                for(int j=0; j<capacity; j++) free(tempTrans[j]);
+                free(subsets);
+                free(tempTrans);
+                return false;
+            }
+            out->finals = new_finals;
+            out->finals[out->num_finals++] = i;
         }
         for(int sym=0; sym<A->num_symbols; sym++) {
             if (tempTrans[i][sym] != -1) {
-                addTransition(&newA, i, sym, tempTrans[i][sym]);
+                if (!addTransition(out, i, sym, tempTrans[i][sym])) {
+                    freeAutomaton(out);
+                    // cleanup
+                    for(int j=0; j<num_subsets; j++) free(subsets[j].states);
+                    for(int j=0; j<capacity; j++) free(tempTrans[j]);
+                    free(subsets);
+                    free(tempTrans);
+                    return false;
+                }
             }
         }
         free(subsets[i].states);
@@ -176,5 +275,176 @@ Automaton determinize(const Automaton *A, FILE *logFile) {
     }
     free(subsets);
     free(tempTrans);
-    return newA;
+    return true;
+}
+
+bool minimize(const Automaton *A, Automaton *out, FILE *logFile) {
+    // Assume A is DFA
+    int n = A->num_states;
+    bool **distinguishable = malloc(n * sizeof(bool*));
+    if (!distinguishable) return false;
+    for (int i = 0; i < n; i++) {
+        distinguishable[i] = calloc(n, sizeof(bool)); // false by default
+        if (!distinguishable[i]) {
+            for (int j = 0; j < i; j++) free(distinguishable[j]);
+            free(distinguishable);
+            return false;
+        }
+    }
+
+    // Mark distinguishable if one final, one not
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            bool i_final = arrayContains(A->finals, A->num_finals, i);
+            bool j_final = arrayContains(A->finals, A->num_finals, j);
+            if (i_final != j_final) {
+                distinguishable[i][j] = true;
+                distinguishable[j][i] = true;
+            }
+        }
+    }
+
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                if (!distinguishable[i][j]) {
+                    for (int sym = 0; sym < A->num_symbols; sym++) {
+                        int idx_i = i * A->num_symbols + sym;
+                        int idx_j = j * A->num_symbols + sym;
+                        int dest_i = A->transitions[idx_i].count > 0 ? A->transitions[idx_i].destinations[0] : -1;
+                        int dest_j = A->transitions[idx_j].count > 0 ? A->transitions[idx_j].destinations[0] : -1;
+                        if (dest_i != dest_j && (dest_i == -1 || dest_j == -1 || distinguishable[dest_i][dest_j])) {
+                            distinguishable[i][j] = true;
+                            distinguishable[j][i] = true;
+                            changed = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Now, group indistinguishable states
+    int *group = malloc(n * sizeof(int));
+    if (!group) {
+        for (int i = 0; i < n; i++) free(distinguishable[i]);
+        free(distinguishable);
+        return false;
+    }
+    int num_groups = 0;
+    bool *visited = calloc(n, sizeof(bool));
+    if (!visited) {
+        free(group);
+        for (int i = 0; i < n; i++) free(distinguishable[i]);
+        free(distinguishable);
+        return false;
+    }
+
+    for (int i = 0; i < n; i++) {
+        if (!visited[i]) {
+            group[i] = num_groups;
+            for (int j = i + 1; j < n; j++) {
+                if (!distinguishable[i][j]) {
+                    group[j] = num_groups;
+                    visited[j] = true;
+                }
+            }
+            num_groups++;
+            visited[i] = true;
+        }
+    }
+
+    // Create minimized automaton
+    if (!createAutomaton(out, num_groups, A->num_symbols)) {
+        free(visited);
+        free(group);
+        for (int i = 0; i < n; i++) free(distinguishable[i]);
+        free(distinguishable);
+        return false;
+    }
+
+    // Set initials
+    out->num_initials = A->num_initials;
+    out->initials = malloc(out->num_initials * sizeof(int));
+    if (!out->initials) {
+        freeAutomaton(out);
+        free(visited);
+        free(group);
+        for (int i = 0; i < n; i++) free(distinguishable[i]);
+        free(distinguishable);
+        return false;
+    }
+    for (int i = 0; i < A->num_initials; i++) {
+        out->initials[i] = group[A->initials[i]];
+    }
+
+    // Set finals
+    bool *group_final = calloc(num_groups, sizeof(bool));
+    if (!group_final) {
+        freeAutomaton(out);
+        free(visited);
+        free(group);
+        for (int i = 0; i < n; i++) free(distinguishable[i]);
+        free(distinguishable);
+        return false;
+    }
+    for (int i = 0; i < A->num_finals; i++) {
+        group_final[group[A->finals[i]]] = true;
+    }
+    for (int g = 0; g < num_groups; g++) {
+        if (group_final[g]) {
+            int *new_finals = realloc(out->finals, (out->num_finals + 1) * sizeof(int));
+            if (!new_finals) {
+                free(group_final);
+                freeAutomaton(out);
+                free(visited);
+                free(group);
+                for (int i = 0; i < n; i++) free(distinguishable[i]);
+                free(distinguishable);
+                return false;
+            }
+            out->finals = new_finals;
+            out->finals[out->num_finals++] = g;
+        }
+    }
+
+    // Set transitions
+    for (int g = 0; g < num_groups; g++) {
+        for (int sym = 0; sym < A->num_symbols; sym++) {
+            // Find a representative state in the group
+            int rep = -1;
+            for (int s = 0; s < n; s++) {
+                if (group[s] == g) {
+                    rep = s;
+                    break;
+                }
+            }
+            if (rep != -1) {
+                int idx = rep * A->num_symbols + sym;
+                if (A->transitions[idx].count > 0) {
+                    int dest = A->transitions[idx].destinations[0];
+                    int dest_group = group[dest];
+                    if (!addTransition(out, g, sym, dest_group)) {
+                        free(group_final);
+                        freeAutomaton(out);
+                        free(visited);
+                        free(group);
+                        for (int i = 0; i < n; i++) free(distinguishable[i]);
+                        free(distinguishable);
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+
+    free(group_final);
+    free(visited);
+    free(group);
+    for (int i = 0; i < n; i++) free(distinguishable[i]);
+    free(distinguishable);
+    return true;
 }

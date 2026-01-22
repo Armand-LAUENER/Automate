@@ -73,7 +73,7 @@ bool loadAutomaton(const char *filename, Automaton *A, FILE *logFile) {
     if (fscanf(file, "%d", &n_sym) != 1) goto error;
     if (fscanf(file, "%d", &n_states) != 1) goto error;
 
-    *A = createAutomaton(n_states, n_sym);
+    if (!createAutomaton(A, n_states, n_sym)) goto error;
 
     if (fscanf(file, "%d", &n_init) != 1) goto error_cleanup;
     A->num_initials = n_init;
@@ -170,4 +170,40 @@ void listAndChooseFile(char *buffer, size_t size, FILE *logFile) {
     } while (choice < 1 || choice > count);
 
     snprintf(buffer, size, "%s/%s", folderPath, files[choice - 1]);
+}
+
+void exportToDOT(const Automaton *A, const char *filename) {
+    FILE *file = fopen(filename, "w");
+    if (!file) return;
+
+    fprintf(file, "digraph Automaton {\n");
+    fprintf(file, "  rankdir=LR;\n");
+
+    // States
+    for (int i = 0; i < A->num_states; i++) {
+        bool is_final = arrayContains(A->finals, A->num_finals, i);
+        bool is_initial = arrayContains(A->initials, A->num_initials, i);
+        fprintf(file, "  %d [label=\"%d\"", i, i);
+        if (is_final) fprintf(file, ", shape=doublecircle");
+        else fprintf(file, ", shape=circle");
+        fprintf(file, "];\n");
+        if (is_initial) {
+            fprintf(file, "  start [shape=point];\n");
+            fprintf(file, "  start -> %d;\n", i);
+        }
+    }
+
+    // Transitions
+    for (int i = 0; i < A->num_states; i++) {
+        for (int j = 0; j < A->num_symbols; j++) {
+            int idx = i * A->num_symbols + j;
+            TransitionList *tl = &A->transitions[idx];
+            for (int k = 0; k < tl->count; k++) {
+                fprintf(file, "  %d -> %d [label=\"%c\"];\n", i, tl->destinations[k], 'a' + j);
+            }
+        }
+    }
+
+    fprintf(file, "}\n");
+    fclose(file);
 }

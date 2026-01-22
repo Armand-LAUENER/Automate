@@ -20,19 +20,34 @@ void processAutomaton(const char *filepath, FILE *logFile) {
 
     if (!isDeterministic(&A, logFile)) {
         logMessage(logFile, "\n>>> Transformation : Determinisation\n");
-        Automaton det = determinize(&A, logFile);
+        Automaton det;
+        if (!determinize(&A, &det, logFile)) {
+            logMessage(logFile, "Erreur : Echec de la determinisation\n");
+            freeAutomaton(&A);
+            return;
+        }
         freeAutomaton(&A); A = det;
         printAutomaton(&A, logFile);
     }
     if (!isStandard(&A, logFile)) {
         logMessage(logFile, "\n>>> Transformation : Standardisation\n");
-        Automaton std = standardize(&A, logFile);
+        Automaton std;
+        if (!standardize(&A, &std, logFile)) {
+            logMessage(logFile, "Erreur : Echec de la standardisation\n");
+            freeAutomaton(&A);
+            return;
+        }
         freeAutomaton(&A); A = std;
         printAutomaton(&A, logFile);
     }
     if (!isComplete(&A, logFile)) {
         logMessage(logFile, "\n>>> Transformation : Completion\n");
-        Automaton comp = complete(&A, logFile);
+        Automaton comp;
+        if (!complete(&A, &comp, logFile)) {
+            logMessage(logFile, "Erreur : Echec de la completion\n");
+            freeAutomaton(&A);
+            return;
+        }
         freeAutomaton(&A); A = comp;
         printAutomaton(&A, logFile);
     }

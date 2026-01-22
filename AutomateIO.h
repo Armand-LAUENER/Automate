@@ -12,5 +12,6 @@ void printAutomaton(const Automaton *A, FILE *logFile);
 bool loadAutomaton(const char *filename, Automaton *A, FILE *logFile);
 void listAndChooseFile(char *buffer, size_t size, FILE *logFile);
 bool resolveAutomatesPath(char *buffer, size_t size, FILE *logFile);
+void exportToDOT(const Automaton *A, const char *filename);
 
 #endif // AUTOMATE_IO_H
